@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>韓文單字練習</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f6f6f6;
+    }
+    h1 {
+      text-align: center;
+    }
+    input, button {
+      font-size: 16px;
+      padding: 5px;
+      margin: 5px 0;
+      width: 100%;
+    }
+    .card, .quiz {
+      margin-top: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .option {
+      padding: 10px;
+      margin: 5px 0;
+      background: #eaeaea;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .option.correct { background: #c8facc; }
+    .option.wrong { background: #fbcaca; }
+  </style>
+</head>
+<body>
+  <h1>韓文單字小工具</h1>
+
+  <div class="card">
+    <h2>➕ 新增單字</h2>
+    <input id="word" placeholder="韓文" />
+    <input id="meaning" placeholder="中文解釋" />
+    <button onclick="addWord()">新增</button>
+  </div>
+
+  <div class="card">
+    <h2>📖 複習模式</h2>
+    <button onclick="showReview()">下一個</button>
+    <p id="reviewWord" style="font-size: 20px; font-weight: bold;"></p>
+    <p id="reviewMeaning" style="color: gray;"></p>
+  </div>
+
+  <div class="quiz">
+    <h2>📝 測驗模式（多選）</h2>
+    <button onclick="nextQuiz()">開始/下一題</button>
+    <p id="quizWord" style="font-size: 20px; font-weight: bold;"></p>
+    <div id="options"></div>
+  </div>
+
+  <script>
+    let wordList = JSON.parse(localStorage.getItem("wordList") || "[]");
+    let errorCount = JSON.parse(localStorage.getItem("errorCount") || "{}");
+
+    function save() {
+      localStorage.setItem("wordList", JSON.stringify(wordList));
+      localStorage.setItem("errorCount", JSON.stringify(errorCount));
+    }
+
+    function addWord() {
+      const word = document.getElementById("word").value.trim();
+      const meaning = document.getElementById("meaning").value.trim();
+      if (word && meaning) {
+        wordList.push({ word, meaning });
+        errorCount[word] = 0;
+        save();
+        alert("已新增！");
+        document.getElementById("word").value = "";
+        document.getElementById("meaning").value = "";
+      }
+    }
+
+    function showReview() {
+      if (wordList.length === 0) return alert("請先新增單字！");
+      const i = Math.floor(Math.random() * wordList.length);
+      const item = wordList[i];
+      document.getElementById("reviewWord").innerText = item.word;
+      document.getElementById("reviewMeaning").innerText = "點此顯示";
+      document.getElementById("reviewMeaning").onclick = () => {
+        document.getElementById("reviewMeaning").innerText = item.meaning;
+      };
+    }
+
+    function nextQuiz() {
+      if (wordList.length < 4) return alert("至少需要4個單字！");
+      const quizData = getWeightedRandom();
+      const correct = quizData.word;
+      document.getElementById("quizWord").innerText = correct.word;
+
+      let options = [correct.meaning];
+      while (options.length < 4) {
+        let other = wordList[Math.floor(Math.random() * wordList.length)].meaning;
+        if (!options.includes(other)) options.push(other);
+      }
+      options = shuffle(options);
+
+      const optBox = document.getElementById("options");
+      optBox.innerHTML = "";
+      options.forEach(opt => {
+        const div = document.createElement("div");
+        div.className = "option";
+        div.innerText = opt;
+        div.onclick = () => {
+          if (opt === correct.meaning) {
+            div.classList.add("correct");
+          } else {
+            div.classList.add("wrong");
+            errorCount[correct.word] = (errorCount[correct.word] || 0) + 1;
+            save();
+          }
+        };
+        optBox.appendChild(div);
+      });
+    }
+
+    function getWeightedRandom() {
+      const weighted = wordList.flatMap(item => {
+        const count = 1 + (errorCount[item.word] || 0);
+        return Array(count).fill(item);
+      });
+      const i = Math.floor(Math.random() * weighted.length);
+      return weighted[i];
+    }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+  </script>
+</body>
+</html>
